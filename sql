@@ -1,0 +1,184 @@
+--EXPLORATORY DATA ANALYSIS--
+--Listing the original database---------------------------------------------------------
+SELECT*
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+--Minimum and Maximum  values of certain variables and timestamps to determine the period of transactions against other variables 
+SELECT
+    MAX(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) AS max_saledate,
+    MIN(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) AS min_saledate,
+    MIN (YEAR),
+    MAX (YEAR),
+    MIN (ODOMETER),
+    MAX (ODOMETER),
+    MIN(MMR),
+    MAX(MMR),
+    MIN(SELLINGPRICE),
+    MAX(SELLINGPRICE),
+
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+
+--Determining MAX and MIN of profit margin ______________________________________
+
+SELECT
+  MIN(PROFIT_MARGIN) AS MIN_PROFIT_MARGIN,
+  MAX(PROFIT_MARGIN) AS MAX_PROFIT_MARGIN
+FROM (SELECT
+    SUM(SELLINGPRICE) - SUM(MMR) AS PROFIT_MARGIN
+  FROM BRIGHTMOTORS.PUBLIC.MOTORSSALES
+  WHERE SELLINGPRICE >= 100 AND MMR >= 100
+  GROUP BY "YEAR", STATE, MAKE, MODEL, SELLER) sub;
+-----------------------------------------------------------------------------
+--Select Distinct of certain string columns to check misplaced fields and nulls.
+SELECT
+DISTINCT MAKE,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+ 
+SELECT 
+DISTINCT MODEL, 
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+
+SELECT
+DISTINCT "TRIM",
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+
+SELECT
+DISTINCT TRANSMISSION,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT BODY,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT STATE,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT CONDITION,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT COLOR,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT INTERIOR,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+SELECT
+DISTINCT SELLER,
+FROM "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES"
+
+DISTINCT VIN
+FROM
+    "BRIGHTMOTORS"."PUBLIC"."MOTORSSALES";
+_________________________________________________________________________________
+
+--Exploring the counts of the nulls and compared to all the records including non-uniform values
+SELECT
+    COUNT(*) - COUNT("YEAR") AS YEAR_NULLS,
+    COUNT(*) - COUNT(MAKE) AS MAKE_NULLS,
+    COUNT(*) - COUNT(MODEL) AS MODEL_NULLS,
+    COUNT(*) - COUNT("TRIM") AS TRIM_NULLS,
+    COUNT(*) - COUNT(BODY) AS BODY_NULLS,
+    COUNT(*) - COUNT(TRANSMISSION) AS TRANSMISSION_NULLS,
+    COUNT(*) - COUNT(VIN) AS VIN_NULLS,
+    COUNT(*) - COUNT(STATE) AS STATE_NULLS,
+    COUNT(*) - COUNT("CONDITION") AS CONDITION_NULLS,
+    COUNT(*) - COUNT(ODOMETER) AS ODOMETER_NULLS,
+    COUNT(*) - COUNT(COLOR) AS COLOR_NULLS,
+    COUNT(*) - COUNT(INTERIOR) AS INTERIOR_NULLS,
+    COUNT(*) - COUNT(SELLER) AS SELLER_NULLS,
+    COUNT(*) - COUNT(MMR) AS MMR_NULLS,
+    COUNT(*) - COUNT(SELLINGPRICE) AS SELLINGPRICE_NULLS,
+    COUNT(*) - COUNT(SALEDATE) AS SALEDATE_NULLS
+FROM
+    BRIGHTMOTORS.PUBLIC.MOTORSSALES;
+_________________________________________________________________________________________________________________________________________    
+--counting duplicates of VIN--
+SELECT VIN, COUNT(*) AS DUPLICATES
+FROM BRIGHTMOTORS.PUBLIC.MOTORSSALES,
+GROUP BY VIN
+HAVING COUNT(*) > 1;
+
+_______________________________________________________________________________________________________________________________________
+--------THE MAIN CODE ON BRIGHTMOTORS REVENUE ON AREA, PERIOD, MODEL, ETC.---------------------------------------------------------------
+_______________________________________________________________________________________________________________________________________ 
+
+---Removing Duplicates using the VIN and treating nulls across all the columns--------------------------------------------------------
+_______________________________________________________________________________________________________________________________________
+-- Cleaned data without duplicates and treated Nulls
+SELECT 
+'\'' || CAST("YEAR" AS VARCHAR) AS "YEAR",
+  COALESCE(MAKE, 'Unspecified') AS MAKE,
+CASE WHEN "TRIM" IS NULL OR "TRIM" IN('S','+',' i ', '1', 'L', 'R','!',' X', '3', '4', '2', 'l',' s',' C') THEN 'Unspecified' 
+ELSE "TRIM" 
+END AS "TRIM",
+CASE
+WHEN MODEL IS NULL OR REGEXP_LIKE(MODEL, '^[0-9]+-[A-Za-z]+') OR MODEL IN ('1', '3', '6', '7') OR MODEL IN ('03-Sep', '05-Sep') THEN 'Unspecified'
+ELSE MODEL
+END AS MODEL,
+  COALESCE(BODY, 'Unspecified') AS BODY,
+  COALESCE(TRANSMISSION, 'Unspecified') AS TRANSMISSION,
+  CASE
+    WHEN VIN IS NULL AND LENGTH(STATE) = 17 AND REGEXP_LIKE(STATE, '^[A-Za-z0-9]+')
+    THEN STATE
+    ELSE VIN
+  END AS VIN,
+  CASE
+    WHEN LENGTH(STATE) = 17 AND REGEXP_LIKE(STATE, '^[A-Za-z0-9]+')
+    THEN 'Unspecified'
+    ELSE STATE
+  END AS STATE,
+  COALESCE(CAST("CONDITION" AS VARCHAR), 'Unspecified') AS "CONDITION",
+  COALESCE(CAST(ODOMETER AS VARCHAR), 'Unspecified') AS ODOMETER,
+  COALESCE(NULLIF(NULLIF(COLOR, '—'), ''), 'Unspecified') AS COLOR,
+  COALESCE(NULLIF(NULLIF(INTERIOR, '—'), ''), 'Unspecified') AS INTERIOR,
+  COALESCE(SELLER, 'Unspecified') AS SELLER,
+  CASE
+    WHEN MMR IS NULL OR MMR < 100 THEN 'Unspecified'
+    ELSE CAST(MMR AS VARCHAR)
+  END AS MMR,
+  CASE
+    WHEN SELLINGPRICE IS NULL OR SELLINGPRICE < 100 THEN 'Unspecified'
+    ELSE CAST(SELLINGPRICE AS VARCHAR)
+  END AS SELLINGPRICE,
+  CASE
+    WHEN SALEDATE IS NULL THEN 'Unspecified'
+    WHEN REGEXP_LIKE(SALEDATE, '^[0-9]+') AND NOT REGEXP_LIKE(SALEDATE, '[A-Za-z]') THEN 'Unspecified'
+    ELSE SALEDATE
+  END AS SALEDATE,
+  
+--Handling the time pockets of sale per-quarters---
+
+  CASE
+    WHEN MONTHNAME(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) IN ('Jan', 'Feb', 'Mar') THEN 'QUARTER 1'
+    WHEN MONTHNAME(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) IN ('Apr', 'May', 'Jun') THEN 'QUARTER 2'
+    WHEN MONTHNAME(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI: SS')) IN ('Jul', 'Aug', 'Sep') THEN 'QUARTER 3'
+    WHEN MONTHNAME(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) IN ('Oct', 'Nov', 'Dec') THEN 'QUARTER 4'
+    ELSE 'Unspecified'
+  END AS QUARTER_SALE,
+  CASE
+    WHEN TO_CHAR(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS'), 'HH24:MI:SS') BETWEEN '00:00:00' AND '11:59:59' THEN '01.Early Morning'
+    WHEN TO_CHAR(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS'), 'HH24:MI:SS') BETWEEN '12:00:00' AND '14:59:59' THEN '02.Early Afternoon'
+    WHEN TO_CHAR(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS'), 'HH24:MI:SS') BETWEEN '15:00:00' AND '17:59:59' THEN '03.Late Afternoon'
+    ELSE '04.Evening'
+  END AS TIMEOFSALE,
+MONTHNAME(TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS')) AS SALE_MONTH,
+SUM(SELLINGPRICE) AS TOTAL_REVENUE,
+  SUM(MMR) AS TOTAL_MMR,
+  SUM(SELLINGPRICE) - SUM(MMR) AS PROFIT_MARGIN,
+  ROUND((SUM(SELLINGPRICE) - SUM(MMR)) * 100.0 / NULLIF(SUM(MMR), 0), 2) AS PROFIT_MARGIN_PCT,
+
+CASE
+  WHEN SUM(SELLINGPRICE) - SUM(MMR) BETWEEN  10000 AND 210000 THEN 'HIGH MARGIN'
+  WHEN SUM(SELLINGPRICE) - SUM(MMR) BETWEEN 0 AND 9999.99 THEN 'MEDIUM MARGIN'
+  WHEN SUM(SELLINGPRICE) - SUM(MMR) BETWEEN -90000 AND -0.99 THEN 'LOSS'
+  ELSE 'Unspecified'
+END AS PROFIT_TIERS
+
+FROM BRIGHTMOTORS.PUBLIC.MOTORSSALES
+WHERE SELLINGPRICE >= 100 AND MMR >= 100
+AND TRY_TO_TIMESTAMP(SALEDATE, 'DY MON DD YYYY HH24:MI:SS') IS NOT NULL
+GROUP BY "YEAR", STATE, MAKE, ODOMETER, MODEL, TRANSMISSION, CONDITION, COLOR, INTERIOR, "TRIM", VIN, SELLER, BODY, QUARTER_SALE, MMR, SELLINGPRICE, SALEDATE, TIMEOFSALE
+ORDER BY TOTAL_REVENUE DESC;
