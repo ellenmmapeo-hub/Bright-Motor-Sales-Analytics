@@ -114,6 +114,7 @@ SELECT
 CASE WHEN "TRIM" IS NULL OR "TRIM" IN('S','+',' i ', '1', 'L', 'R','!',' X', '3', '4', '2', 'l',' s',' C') THEN 'Unspecified' 
 ELSE "TRIM" 
 END AS "TRIM",
+COUNT(*) AS UNITS_SOLD,
 CASE
 WHEN MODEL IS NULL OR REGEXP_LIKE(MODEL, '^[0-9]+-[A-Za-z]+') OR MODEL IN ('1', '3', '6', '7') OR MODEL IN ('03-Sep', '05-Sep') THEN 'Unspecified'
 ELSE MODEL
